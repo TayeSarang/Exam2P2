@@ -1,27 +1,29 @@
-import sqlite3
-from pathlib import Path
+from flet import app, DataTable, DataColumn, DataRow, DataCell, Text
+import chinook.db as db
 
-DB_PATH = Path(__file__).parent.parent / "Chinook_Sqlite.sqlite"  # Adjust path if needed
+def main(page):
+    page.title = "Top 10 Best-Selling Artists"
+    page.vertical_alignment = "start"
 
-def get_top_artists():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    query = """
-        SELECT
-            ar.Name as name,
-            SUM(ii.UnitPrice * ii.Quantity) as sales
-        FROM
-            InvoiceLine ii
-            JOIN Track t ON ii.TrackId = t.TrackId
-            JOIN Album al ON t.AlbumId = al.AlbumId
-            JOIN Artist ar ON al.ArtistId = ar.ArtistId
-        GROUP BY
-            ar.ArtistId
-        ORDER BY
-            sales DESC
-        LIMIT 10
-    """
-    cursor.execute(query)
-    results = cursor.fetchall()
-    conn.close()
-    return [{"name": row[0], "sales": row[1]} for row in results]
+    artists = db.get_top_artists()  # Returns list of dicts: [{'name': ..., 'sales': ...}, ...]
+
+    table = DataTable(
+        columns=[
+            DataColumn(Text("Artist")),
+            DataColumn(Text("Total Sales")),
+        ],
+        rows=[
+            DataRow(
+                cells=[
+                    DataCell(Text(artist["name"])),
+                    DataCell(Text(f"{artist['sales']:.2f}")),
+                ]
+            )
+            for artist in artists
+        ],
+    )
+
+    page.add(table)
+
+if __name__ == "__main__":
+    app(target=main)
